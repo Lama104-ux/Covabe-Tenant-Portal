@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using CovabeTenantPortal.Core.Interfaces;
 using CovabeTenantPortal.Infrastructure.Data;
 using CovabeTenantPortal.Infrastructure.Seeding;
@@ -16,9 +17,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<SuperAdminSettings>(builder.Configuration.GetSection("SuperAdmin"));
+builder.Services.Configure<InvitationSettings>(builder.Configuration.GetSection("Invitation"));
 
 builder.Services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
+builder.Services.AddSingleton<IInvitationTokenService, InvitationTokenService>();
+builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
 builder.Services.AddHostedService<SuperAdminSeeder>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -36,6 +40,7 @@ if (string.IsNullOrWhiteSpace(jwtKey)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -45,13 +50,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role,
             ClockSkew = TimeSpan.Zero
         };
     });
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy => policy
+        .SetIsOriginAllowed(_ => true)
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials());
+});
+
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -62,6 +80,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
