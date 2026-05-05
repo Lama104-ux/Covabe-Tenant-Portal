@@ -20,7 +20,8 @@ public class InvitationsController(
     IInvitationTokenService tokenService,
     IPasswordHasherService passwordHasher,
     IEmailService emailService,
-    IOptions<InvitationSettings> settings) : ControllerBase
+    IOptions<InvitationSettings> settings,
+    IHostEnvironment environment) : ControllerBase
 {
     private readonly InvitationSettings _settings = settings.Value;
 
@@ -63,7 +64,12 @@ public class InvitationsController(
         var acceptUrl = $"{_settings.AcceptUrlBase}?token={rawToken}";
         await emailService.SendInvitationAsync(request.Email, acceptUrl, request.Role);
 
-        return Ok(new CreateInvitationResponse(invitation.Id, invitation.Email, invitation.Role, invitation.ExpiresAt));
+        return Ok(new CreateInvitationResponse(
+            invitation.Id,
+            invitation.Email,
+            invitation.Role,
+            invitation.ExpiresAt,
+            environment.IsDevelopment() ? acceptUrl : null));
     }
 
     [AllowAnonymous]
