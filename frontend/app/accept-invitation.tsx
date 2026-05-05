@@ -32,6 +32,21 @@ export default function AcceptInvitationScreen() {
 
   if (user) return <Redirect href="/home" />;
 
+  const handleTokenChange = (value: string) => {
+    const trimmed = value.trim();
+    try {
+      const url = new URL(trimmed);
+      const tokenParam = url.searchParams.get('token');
+      if (tokenParam) {
+        setToken(tokenParam);
+        return;
+      }
+    } catch {
+      // not a URL — use as-is
+    }
+    setToken(trimmed);
+  };
+
   const handleSubmit = async () => {
     if (!token.trim()) {
       setError('Inbjudningskod saknas');
@@ -86,11 +101,11 @@ export default function AcceptInvitationScreen() {
           <Text style={styles.label}>Inbjudningskod</Text>
           <TextInput
             style={[styles.input, tokenFromUrl && styles.inputDisabled]}
-            placeholder="Klistra in koden från mejlet"
+            placeholder="Klistra in länken eller koden från mejlet"
             autoCapitalize="none"
             autoCorrect={false}
             value={token}
-            onChangeText={setToken}
+            onChangeText={handleTokenChange}
             editable={!submitting && !tokenFromUrl}
           />
 
