@@ -85,6 +85,14 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>Logga in</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.linkContainer}
+          onPress={() => router.push('/accept-invitation')}
+          disabled={submitting}
+        >
+          <Text style={styles.link}>Har du en inbjudningskod? Aktivera ditt konto</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -156,5 +164,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 12,
     textAlign: 'center',
+  },
+  linkContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  link: {
+    color: '#2563eb',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
