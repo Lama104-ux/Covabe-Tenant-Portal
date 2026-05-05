@@ -1,13 +1,16 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/services/auth-context';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   if (!user) return <Redirect href="/login" />;
+
+  const canCreateInvitations = user.role === 'SuperAdmin' || user.role === 'Admin';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -16,8 +19,17 @@ export default function HomeScreen() {
         <Text style={styles.role}>Roll: {user.role}</Text>
         <Text style={styles.email}>{user.email}</Text>
 
-        <TouchableOpacity style={styles.button} onPress={logout}>
-          <Text style={styles.buttonText}>Logga ut</Text>
+        {canCreateInvitations ? (
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push('/create-invitation')}
+          >
+            <Text style={styles.primaryButtonText}>Skapa inbjudan</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+          <Text style={styles.logoutButtonText}>Logga ut</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -48,15 +60,28 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
-  button: {
+  primaryButton: {
     marginTop: 32,
+    backgroundColor: '#2563eb',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    marginTop: 16,
     backgroundColor: '#dc2626',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignSelf: 'flex-start',
   },
-  buttonText: {
+  logoutButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
