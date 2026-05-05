@@ -17,6 +17,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="accept-invitation" />
           <Stack.Screen name="home" />
+          <Stack.Screen name="create-invitation" />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
