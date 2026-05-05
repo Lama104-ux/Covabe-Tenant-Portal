@@ -6,4 +6,5 @@ public record CreateInvitationResponse(
     Guid Id,
     string Email,
     InvitationRole Role,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt,
+    string? AcceptUrl);
