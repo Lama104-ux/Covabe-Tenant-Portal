@@ -11,6 +11,7 @@ export default function HomeScreen() {
   if (!user) return <Redirect href="/login" />;
 
   const canCreateInvitations = user.role === 'SuperAdmin' || user.role === 'Admin';
+  const canManageProperties = user.role === 'Admin';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -18,6 +19,15 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>Hej {user.firstName}!</Text>
         <Text style={styles.role}>Roll: {user.role}</Text>
         <Text style={styles.email}>{user.email}</Text>
+
+        {canManageProperties ? (
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push('/properties')}
+          >
+            <Text style={styles.primaryButtonText}>Mina fastigheter</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {canCreateInvitations ? (
           <TouchableOpacity
@@ -61,7 +71,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   primaryButton: {
-    marginTop: 32,
+    marginTop: 16,
     backgroundColor: '#2563eb',
     paddingVertical: 14,
     paddingHorizontal: 24,
