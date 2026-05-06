@@ -18,11 +18,22 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<SuperAdminSettings>(builder.Configuration.GetSection("SuperAdmin"));
 builder.Services.Configure<InvitationSettings>(builder.Configuration.GetSection("Invitation"));
+builder.Services.Configure<CovabeApiSettings>(builder.Configuration.GetSection("Covabe"));
+
+builder.Services.AddHttpClient(string.Empty)
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        if (builder.Environment.IsDevelopment())
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        return handler;
+    });
 
 builder.Services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IInvitationTokenService, InvitationTokenService>();
 builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
+builder.Services.AddSingleton<ICovabeApiClient, CovabeApiClient>();
 builder.Services.AddHostedService<SuperAdminSeeder>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
