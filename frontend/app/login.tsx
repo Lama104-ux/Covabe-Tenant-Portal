@@ -1,16 +1,21 @@
-import React, { useState } from "react";
-import {
-  View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
-  StatusBar, useColorScheme,
-  SafeAreaView,
-} from "react-native";
-import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  KeyboardAvoidingView, Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text, TextInput,
+  useColorScheme,
+  View,
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
 
-import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
 import { CovabeLogo } from "@/components/CovabeLogo";
+import { Fonts, makeTheme, Radius, Spacing, Theme } from "@/constants/theme";
 import { useAuth } from "@/services/auth-context";
 
 const STRINGS = {
@@ -248,7 +253,6 @@ const s = StyleSheet.create({
     paddingBottom: Spacing.huge,
     paddingTop: Spacing.lg,
     gap: 14,
-    marginTop: "auto",
   },
   title: {
     fontFamily: Fonts.bold,
