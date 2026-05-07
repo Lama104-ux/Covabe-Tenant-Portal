@@ -22,7 +22,7 @@ const STRINGS = {
   welcome: "Logga in för att fortsätta",
   email: "E-post",
   password: "Lösenord",
-  emailPlaceholder: "namn@exempel.se",
+  emailPlaceholder: "din.epost@example.com",
   passwordPlaceholder: "••••••••",
   login: "Logga in",
   haveInvite: "Har du en inbjudningskod?",
