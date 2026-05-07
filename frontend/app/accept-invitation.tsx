@@ -44,6 +44,7 @@ const T = {
   s2ErrNames: "Förnamn och efternamn måste vara minst 2 tecken",
   s2ErrMatch: "Lösenorden matchar inte",
   s2ErrTerms: "Du måste godkänna villkoren",
+  s2ErrPhone: "Ange ett giltigt telefonnummer eller lämna fältet tomt",
 
   s3Title: "Välkommen till Covabe!",
   s3Sub: "Ditt konto är aktiverat. Du kan nu logga in och börja använda portalen.",
@@ -111,6 +112,10 @@ export default function AcceptInvitationScreen() {
 
   const activate = async () => {
     if (!namesValid) { setPwErr(T.s2ErrNames); return; }
+    const phoneTrimmed = phone.trim();
+    if (phoneTrimmed && !/^[0-9+\-\s()]{6,}$/.test(phoneTrimmed)) {
+      setPwErr(T.s2ErrPhone); return;
+    }
     if (pw !== pw2) { setPwErr(T.s2ErrMatch); return; }
     if (!terms) { setPwErr(T.s2ErrTerms); return; }
     setPwErr(null);
@@ -163,7 +168,7 @@ export default function AcceptInvitationScreen() {
         {step !== 3 && <Progress step={step} theme={theme} />}
 
         <ScrollView
-          contentContainerStyle={{ paddingTop: 40, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -264,7 +269,8 @@ function Step2({
                  onChangeText={setLastName} icon={<UserIcon color={theme.textMute} />} />
 
       <TextField theme={theme} label={T.s2Phone} value={phone}
-                 onChangeText={setPhone} placeholder={T.s2PhonePlaceholder}
+                 onChangeText={(v: string) => setPhone(v.replace(/[^0-9+\-\s()]/g, ""))}
+                 placeholder={T.s2PhonePlaceholder}
                  keyboardType="phone-pad" icon={<PhoneIcon color={theme.textMute} />} />
 
       <PwField theme={theme} label={T.s2Pw} value={pw} onChangeText={setPw}
