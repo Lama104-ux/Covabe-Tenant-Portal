@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import {
   KeyboardAvoidingView, Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { CovabeLogo } from "@/components/CovabeLogo";
@@ -67,7 +67,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["bottom"]}>
       <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
