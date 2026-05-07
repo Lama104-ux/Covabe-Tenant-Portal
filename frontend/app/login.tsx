@@ -6,6 +6,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import { Redirect, useRouter } from "expo-router";
 
 import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
@@ -137,14 +138,19 @@ export default function LoginScreen() {
 }
 
 function CalmHero({ theme }: { theme: Theme }) {
+  const gradientColors: [string, string, string] = theme.dark
+    ? ["#0a3036", "#0a3036cc", theme.bg]
+    : [`${theme.accent}66`, `${theme.accent}25`, theme.bg];
+
   return (
-    <View
+    <LinearGradient
+      colors={gradientColors}
+      locations={[0, 0.55, 1]}
       style={{
         paddingTop: 60,
-        paddingBottom: 40,
+        paddingBottom: 80,
         alignItems: "center",
         gap: 18,
-        backgroundColor: theme.dark ? "#0a3036" : `${theme.accent}10`,
       }}
     >
       <CovabeLogo size={56} light={theme.dark} />
@@ -171,7 +177,7 @@ function CalmHero({ theme }: { theme: Theme }) {
           TENANT PORTAL
         </Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
