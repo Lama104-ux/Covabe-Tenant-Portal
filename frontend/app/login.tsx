@@ -124,11 +124,13 @@ export default function LoginScreen() {
                 { backgroundColor: theme.accent, opacity: loading ? 0.6 : pressed ? 0.92 : 1 },
               ]}
             >
-              <Text style={s.primaryBtnText}>{loading ? "…" : STRINGS.login}</Text>
+              <Text numberOfLines={1} allowFontScaling={false} style={s.primaryBtnText}>
+                {loading ? "…" : STRINGS.login}
+              </Text>
             </Pressable>
 
             <Pressable onPress={handleAcceptInvite} style={s.linkBtn}>
-              <Text style={[s.linkText, { color: theme.textMute }]}>
+              <Text numberOfLines={1} allowFontScaling={false} style={[s.linkText, { color: theme.textMute }]}>
                 {STRINGS.haveInvite}{" "}
                 <Text style={{ color: theme.accent, fontFamily: Fonts.semibold }}>
                   {STRINGS.activate}
@@ -159,24 +161,29 @@ function CalmHero({ theme }: { theme: Theme }) {
       }}
     >
       <CovabeLogo size={56} light={theme.dark} />
-      <View style={{ alignItems: "center" }}>
+      <View style={{ alignItems: "center", paddingHorizontal: 24 }}>
         <Text
+          numberOfLines={1}
+          allowFontScaling={false}
           style={{
             fontFamily: Fonts.display,
             fontSize: 26,
             color: theme.dark ? "#fff" : theme.accent,
-            letterSpacing: -0.6,
+            paddingHorizontal: 4,
           }}
         >
           Covabe
         </Text>
         <Text
+          numberOfLines={1}
+          allowFontScaling={false}
           style={{
             fontFamily: Fonts.medium,
             fontSize: 11,
             color: theme.textMute,
             marginTop: 6,
             letterSpacing: 1,
+            paddingHorizontal: 4,
           }}
         >
           TENANT PORTAL
@@ -257,7 +264,6 @@ const s = StyleSheet.create({
   title: {
     fontFamily: Fonts.bold,
     fontSize: 26,
-    letterSpacing: -0.3,
     marginBottom: 10,
   },
   field: {
