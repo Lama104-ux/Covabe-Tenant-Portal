@@ -31,7 +31,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
           <Stack.Screen name="accept-invitation" />
-          <Stack.Screen name="home" />
+          <Stack.Screen name="(tabs)" />
           <Stack.Screen name="create-invitation" />
           <Stack.Screen name="properties" />
         </Stack>
