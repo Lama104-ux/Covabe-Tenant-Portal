@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { Redirect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Pressable, ScrollView, StatusBar, StyleSheet,
   Text, useColorScheme, View,
@@ -9,7 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
-import { api, ApiError } from "@/services/api";
+import { api } from "@/services/api";
 import { useAuth } from "@/services/auth-context";
 
 type Property = {
@@ -56,6 +56,7 @@ export default function HomeScreen() {
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [, setTick] = useState(0);
 
   const fetchProperties = useCallback(async () => {
     if (!token || user?.role !== "Admin") {
@@ -66,7 +67,7 @@ export default function HomeScreen() {
       const data = await api.get<Property[]>("/api/properties", token);
       setProperties(data);
     } catch (e) {
-      const _ = (e as ApiError)?.message;
+      void e;
     } finally {
       setLoaded(true);
     }
@@ -78,12 +79,20 @@ export default function HomeScreen() {
     }, [fetchProperties]),
   );
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchProperties();
+      setTick(t => t + 1);
+    }, 30000);
+    return () => clearInterval(id);
+  }, [fetchProperties]);
+
   if (!user) return <Redirect href="/login" />;
 
   const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const total = properties.length;
-  const active = properties.filter(p => p.status === 1).length;
+  const active = properties.filter(p => p.status === 0).length;
   const open = 0;
 
   return (
