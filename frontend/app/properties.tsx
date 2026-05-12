@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { Redirect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -53,6 +53,18 @@ export default function PropertiesScreen() {
       fetchProperties();
     }, [fetchProperties]),
   );
+
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const data = await api.get<Property[]>('/api/properties', token);
+        setProperties(data);
+      } catch (e) {
+        void e;
+      }
+    }, 30000);
+    return () => clearInterval(id);
+  }, [token]);
 
   if (!user) return <Redirect href="/login" />;
   if (user.role !== 'Admin') return <Redirect href="/home" />;
