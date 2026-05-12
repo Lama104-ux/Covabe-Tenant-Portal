@@ -1,18 +1,16 @@
-import { useFocusEffect } from '@react-navigation/native';
-import { Redirect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from "@react-navigation/native";
+import { Redirect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  ActivityIndicator, Pressable, ScrollView, StatusBar, StyleSheet,
+  Text, useColorScheme, View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
-import { api, ApiError } from '@/services/api';
-import { useAuth } from '@/services/auth-context';
+import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
+import { api } from "@/services/api";
+import { useAuth } from "@/services/auth-context";
 
 type Property = {
   id: string;
@@ -26,7 +24,19 @@ type Property = {
   status: number;
 };
 
+const T = {
+  title: "Mina fastigheter",
+  back: "Tillbaka",
+  statusActive: "Aktiv",
+  statusInactive: "Inaktiv",
+  empty: "Inga fastigheter ännu",
+  emptySub: "Lägg till fastigheter i Covabe-webbsidan så syns de här automatiskt.",
+  retry: "Försök igen",
+};
+
 export default function PropertiesScreen() {
+  const scheme = useColorScheme();
+  const theme = makeTheme(scheme === "dark");
   const router = useRouter();
   const { user, token } = useAuth();
 
@@ -38,10 +48,10 @@ export default function PropertiesScreen() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.get<Property[]>('/api/properties', token);
+      const data = await api.get<Property[]>("/api/properties", token);
       setProperties(data);
     } catch (e) {
-      const message = (e as ApiError)?.message ?? 'Kunde inte hämta fastigheter';
+      const message = (e as { message?: string })?.message ?? "Kunde inte hämta fastigheter";
       setError(message);
     } finally {
       setLoading(false);
@@ -57,7 +67,7 @@ export default function PropertiesScreen() {
   useEffect(() => {
     const id = setInterval(async () => {
       try {
-        const data = await api.get<Property[]>('/api/properties', token);
+        const data = await api.get<Property[]>("/api/properties", token);
         setProperties(data);
       } catch (e) {
         void e;
@@ -67,169 +77,177 @@ export default function PropertiesScreen() {
   }, [token]);
 
   if (!user) return <Redirect href="/login" />;
-  if (user.role !== 'Admin') return <Redirect href="/home" />;
+  if (user.role !== "Admin") return <Redirect href="/home" />;
+
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/home");
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Mina fastigheter</Text>
-        <Text style={styles.subtitle}>
-          {loading ? 'Hämtar från Covabe…' : `${properties.length} st`}
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["top"]}>
+      <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
+
+      <View style={s.header}>
+        <Pressable onPress={goBack} hitSlop={10} style={s.backIconBtn}>
+          <ChevronLeft color={theme.text} />
+        </Pressable>
+        <Text style={[s.title, { color: theme.text }]}>{T.title}</Text>
+        <View style={s.backIconBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {loading ? (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#2563eb" />
+      {loading && properties.length === 0 ? (
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color={theme.accent} />
+        </View>
+      ) : error && properties.length === 0 ? (
+        <View style={s.centered}>
+          <Text style={[s.errorText, { color: theme.danger }]}>{error}</Text>
+          <Pressable
+            onPress={fetchProperties}
+            style={({ pressed }) => [
+              s.retryBtn,
+              { backgroundColor: theme.accent, opacity: pressed ? 0.92 : 1 },
+            ]}
+          >
+            <Text style={s.retryText}>{T.retry}</Text>
+          </Pressable>
+        </View>
+      ) : properties.length === 0 ? (
+        <View style={s.empty}>
+          <View style={[s.emptyIcon, { backgroundColor: theme.accentSoft }]}>
+            <BuildingIcon color={theme.accent} size={32} />
           </View>
-        ) : error ? (
-          <View style={styles.centered}>
-            <Text style={styles.error}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchProperties}>
-              <Text style={styles.retryButtonText}>Försök igen</Text>
-            </TouchableOpacity>
-          </View>
-        ) : properties.length === 0 ? (
-          <View style={styles.centered}>
-            <Text style={styles.emptyTitle}>Inga fastigheter hittade</Text>
-            <Text style={styles.emptyText}>
-              Lägg till fastigheter i Covabe-webbsidan så syns de här automatiskt.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.sourceNote}>
-              Fastigheterna hanteras i Covabe-webbsidan. Här ser du dem i läs-läge.
-            </Text>
-            {properties.map((property) => (
-              <View key={property.id} style={styles.card}>
-                <Text style={styles.cardTitle}>{property.name ?? 'Namnlös fastighet'}</Text>
-                {property.customId ? (
-                  <Text style={styles.cardMeta}>ID: {property.customId}</Text>
-                ) : null}
-                {property.address || property.city ? (
-                  <Text style={styles.cardMeta}>
-                    {[property.address, property.city, property.country]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </Text>
-                ) : null}
-                {property.description ? (
-                  <Text style={styles.cardDescription}>{property.description}</Text>
-                ) : null}
-              </View>
+          <Text style={[s.emptyTitle, { color: theme.text }]}>{T.empty}</Text>
+          <Text style={[s.emptySub, { color: theme.textMute }]}>{T.emptySub}</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ padding: Spacing.xl, gap: 10 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {[...properties]
+            .sort((a, b) => {
+              const aActive = a.status === 0;
+              const bActive = b.status === 0;
+              if (aActive !== bActive) return aActive ? -1 : 1;
+              return (b.covabePropertyId ?? 0) - (a.covabePropertyId ?? 0);
+            })
+            .map((p) => (
+              <PropertyCard key={p.id} theme={theme} property={p} />
             ))}
-          </>
-        )}
-      </ScrollView>
-
-      <TouchableOpacity style={styles.backLink} onPress={() => router.replace('/home')}>
-        <Text style={styles.backLinkText}>← Tillbaka</Text>
-      </TouchableOpacity>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7fa',
-  },
+function PropertyCard({ theme, property }: { theme: Theme; property: Property }) {
+  const active = property.status === 0;
+  const addressLine = property.name || property.address || "Namnlös fastighet";
+  const cityLine = [property.country, property.city, property.address]
+    .filter((v) => v && v !== addressLine)
+    .join(", ");
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        s.card,
+        {
+          backgroundColor: theme.surface,
+          borderColor: theme.border,
+          opacity: pressed ? 0.92 : 1,
+        },
+      ]}
+    >
+      <View style={[s.cardIcon, { backgroundColor: theme.accentSoft }]}>
+        <BuildingIcon color={theme.accent} size={24} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[s.cardAddress, { color: theme.text }]} numberOfLines={1}>
+          {addressLine}
+        </Text>
+        {cityLine ? (
+          <Text style={[s.cardCity, { color: theme.textMute }]} numberOfLines={1}>
+            {cityLine}
+          </Text>
+        ) : null}
+        <View style={[
+          s.statusPill,
+          { backgroundColor: active ? `${theme.accent}15` : `${theme.textMute}15` },
+        ]}>
+          <View style={[
+            s.statusDot,
+            { backgroundColor: active ? "#009700" : theme.danger },
+          ]} />
+          <Text style={[
+            s.statusText,
+            { color: active ? theme.accent : theme.textMute },
+          ]}>
+            {active ? T.statusActive : T.statusInactive}
+          </Text>
+        </View>
+      </View>
+      <ChevronRight color={theme.textMute} />
+    </Pressable>
+  );
+}
+
+const Icon = ({ children, color = "#000", size = 22 }: any) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+       stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </Svg>
+);
+const BuildingIcon = (p: any) => <Icon {...p}><Path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M8 7h.01M8 11h.01M8 15h.01M12 7h.01M12 11h.01M12 15h.01"/></Icon>;
+const ChevronLeft  = (p: any) => <Icon {...p}><Path d="M15 6l-6 6 6 6"/></Icon>;
+const ChevronRight = (p: any) => <Icon {...p} size={20}><Path d="M9 6l6 6-6 6"/></Icon>;
+
+const s = StyleSheet.create({
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 12,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg, paddingVertical: 14,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a2e',
+  backIconBtn: {
+    width: 36, height: 36,
+    alignItems: "center", justifyContent: "center",
   },
-  subtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  sourceNote: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 12,
-    flexGrow: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
+  title: { fontFamily: Fonts.bold, fontSize: 22, flex: 1, textAlign: "center" },
+
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderWidth: 1, borderRadius: Radius.lg,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a2e',
+  cardIcon: {
+    width: 48, height: 48, borderRadius: Radius.md,
+    alignItems: "center", justifyContent: "center",
   },
-  cardMeta: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 4,
+  cardAddress: { fontFamily: Fonts.semibold, fontSize: 15, lineHeight: 19 },
+  cardCity:    { fontFamily: Fonts.regular, fontSize: 12, lineHeight: 17, marginTop: 3 },
+
+  statusPill: {
+    alignSelf: "flex-start",
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: 999, marginTop: 8,
   },
-  cardDescription: {
-    fontSize: 14,
-    color: '#374151',
-    marginTop: 8,
+  statusDot:  { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontFamily: Fonts.semibold, fontSize: 11, letterSpacing: 0.2 },
+
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: Spacing.xxl, gap: 14 },
+  errorText: { fontFamily: Fonts.medium, fontSize: 14, textAlign: "center" },
+  retryBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: Radius.lg },
+  retryText: { color: "#fff", fontFamily: Fonts.semibold, fontSize: 14 },
+
+  empty: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    paddingHorizontal: Spacing.xxl, gap: 12,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
+  emptyIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    alignItems: "center", justifyContent: "center",
   },
-  emptyText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  error: {
-    color: '#dc2626',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  backLink: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  backLinkText: {
-    color: '#2563eb',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  emptyTitle: { fontFamily: Fonts.semibold, fontSize: 16 },
+  emptySub:   { fontFamily: Fonts.regular, fontSize: 13, textAlign: "center", lineHeight: 19 },
 });
