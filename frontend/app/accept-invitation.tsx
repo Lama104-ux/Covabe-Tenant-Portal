@@ -466,7 +466,7 @@ const s = StyleSheet.create({
 
   logoBlock: { alignItems: "center", paddingVertical: 18 },
 
-  title: { fontFamily: Fonts.bold, fontSize: 24, letterSpacing: -0.3 },
+  title: { fontFamily: Fonts.bold, fontSize: 24 },
   sub:   { fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20 },
   label: { fontFamily: Fonts.medium, fontSize: 12 },
   err:   { fontFamily: Fonts.medium, fontSize: 12 },
