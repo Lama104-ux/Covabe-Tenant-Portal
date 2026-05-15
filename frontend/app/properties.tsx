@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
 import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
+import { PROPERTY_TYPE_META, propertyTypeFromInt } from "@/constants/propertyTypes";
 import { api } from "@/services/api";
 import { useAuth } from "@/services/auth-context";
 
@@ -22,6 +23,7 @@ type Property = {
   country: string | null;
   description: string | null;
   status: number;
+  type: number | null;
 };
 
 const T = {
@@ -84,6 +86,9 @@ export default function PropertiesScreen() {
     else router.replace("/home");
   };
 
+  const openProperty = (p: Property) =>
+    router.push({ pathname: "/property/[id]", params: { id: p.id } });
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["top"]}>
       <StatusBar barStyle={theme.dark ? "light-content" : "dark-content"} />
@@ -134,7 +139,7 @@ export default function PropertiesScreen() {
               return (b.covabePropertyId ?? 0) - (a.covabePropertyId ?? 0);
             })
             .map((p) => (
-              <PropertyCard key={p.id} theme={theme} property={p} />
+              <PropertyCard key={p.id} theme={theme} property={p} onPress={() => openProperty(p)} />
             ))}
         </ScrollView>
       )}
@@ -142,15 +147,17 @@ export default function PropertiesScreen() {
   );
 }
 
-function PropertyCard({ theme, property }: { theme: Theme; property: Property }) {
+function PropertyCard({ theme, property, onPress }: { theme: Theme; property: Property; onPress: () => void }) {
   const active = property.status === 0;
   const addressLine = property.name || property.address || "Namnlös fastighet";
   const cityLine = [property.country, property.city, property.address]
     .filter((v) => v && v !== addressLine)
     .join(", ");
+  const typeMeta = PROPERTY_TYPE_META[propertyTypeFromInt(property.type)];
 
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }) => [
         s.card,
         {
@@ -172,20 +179,25 @@ function PropertyCard({ theme, property }: { theme: Theme; property: Property })
             {cityLine}
           </Text>
         ) : null}
-        <View style={[
-          s.statusPill,
-          { backgroundColor: active ? `${theme.accent}15` : `${theme.textMute}15` },
-        ]}>
+        <View style={s.chips}>
           <View style={[
-            s.statusDot,
-            { backgroundColor: active ? "#009700" : theme.danger },
-          ]} />
-          <Text style={[
-            s.statusText,
-            { color: active ? theme.accent : theme.textMute },
+            s.statusPill,
+            { backgroundColor: active ? `${theme.accent}15` : `${theme.danger}15` },
           ]}>
-            {active ? T.statusActive : T.statusInactive}
-          </Text>
+            <View style={[
+              s.statusDot,
+              { backgroundColor: active ? "#009700" : theme.danger },
+            ]} />
+            <Text style={[
+              s.statusText,
+              { color: active ? theme.accent : theme.danger },
+            ]}>
+              {active ? T.statusActive : T.statusInactive}
+            </Text>
+          </View>
+          <View style={[s.typeChip, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+            <Text style={[s.typeText, { color: theme.textMute }]}>{typeMeta.label}</Text>
+          </View>
         </View>
       </View>
       <ChevronRight color={theme.textMute} />
@@ -226,14 +238,16 @@ const s = StyleSheet.create({
   cardAddress: { fontFamily: Fonts.semibold, fontSize: 15, lineHeight: 19 },
   cardCity:    { fontFamily: Fonts.regular, fontSize: 12, lineHeight: 17, marginTop: 3 },
 
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   statusPill: {
-    alignSelf: "flex-start",
     flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 10, paddingVertical: 3,
-    borderRadius: 999, marginTop: 8,
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999,
   },
   statusDot:  { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontFamily: Fonts.semibold, fontSize: 11, letterSpacing: 0.2 },
+
+  typeChip: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, borderWidth: 1 },
+  typeText: { fontFamily: Fonts.semibold, fontSize: 11, letterSpacing: 0.2 },
 
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: Spacing.xxl, gap: 14 },
   errorText: { fontFamily: Fonts.medium, fontSize: 14, textAlign: "center" },
