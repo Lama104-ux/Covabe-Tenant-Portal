@@ -21,11 +21,7 @@ public class CovabeApiClient(
 
     public async Task<List<CovabeProperty>> GetPropertiesByOwnerEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        var token = await GetAccessTokenAsync(cancellationToken);
-        var client = httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+        var client = await CreateAuthorizedClientAsync(cancellationToken);
 
         var memberUrl = $"{_settings.CovabeServiceUrl.TrimEnd('/')}/api/app/member/tenant-member-by-email?email={Uri.EscapeDataString(email)}";
         var memberResponse = await client.GetAsync(memberUrl, cancellationToken);
@@ -57,6 +53,78 @@ public class CovabeApiClient(
 
         var properties = await propertiesResponse.Content.ReadFromJsonAsync<List<CovabeProperty>>(cancellationToken: cancellationToken);
         return properties ?? [];
+    }
+
+    public async Task<List<CovabeBuilding>> GetBuildingsForPropertyAsync(string ownerEmail, Guid propertyId, CancellationToken cancellationToken = default)
+    {
+        var properties = await GetPropertiesByOwnerEmailAsync(ownerEmail, cancellationToken);
+        if (properties.All(p => p.Id != propertyId))
+        {
+            logger.LogInformation("Property {PropertyId} not owned by {Email}", propertyId, ownerEmail);
+            return [];
+        }
+
+        var client = await CreateAuthorizedClientAsync(cancellationToken);
+        var baseUrl = _settings.PropertyServiceUrl.TrimEnd('/');
+
+        var buildings = await FetchListAsync<RawBuildingDto>(client,
+            $"{baseUrl}/api/app/building/by-property-id/{propertyId}", cancellationToken);
+
+        var floors = buildings.Count == 0
+            ? new List<RawFloorDto>()
+            : await FetchListAsync<RawFloorDto>(client,
+                $"{baseUrl}/api/app/floor/by-property-id/{propertyId}", cancellationToken);
+
+        var units = floors.Count == 0
+            ? new List<RawUnitDto>()
+            : await FetchListAsync<RawUnitDto>(client,
+                $"{baseUrl}/api/app/unit/by-property-id/{propertyId}", cancellationToken);
+
+        return buildings
+            .Select(b =>
+            {
+                var floorsForBuilding = floors
+                    .Where(f => f.BuildingId == b.Id)
+                    .OrderBy(f => f.Number)
+                    .Select(f =>
+                    {
+                        var unitsForFloor = units
+                            .Where(u => u.FloorId == f.Id)
+                            .Select(u => new CovabeUnit(
+                                u.Id, u.PropertyId, u.BuildingId, u.FloorId,
+                                u.CustomUnitId, u.Code, u.Type, u.Area, (int)u.Status))
+                            .ToList();
+                        return new CovabeFloor(
+                            f.Id, f.PropertyId, f.BuildingId, f.Number, f.CustomId,
+                            (int)f.Status, f.UnitCount, unitsForFloor);
+                    })
+                    .ToList();
+                return new CovabeBuilding(
+                    b.Id, b.PropertyId, b.Name, b.CustomId, (int)b.Status,
+                    b.FloorCount, b.UnitCount, floorsForBuilding);
+            })
+            .ToList();
+    }
+
+    private async Task<List<T>> FetchListAsync<T>(HttpClient client, string url, CancellationToken cancellationToken)
+    {
+        var response = await client.GetAsync(url, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning("Covabe call failed: {Status} for {Url}", response.StatusCode, url);
+            return new List<T>();
+        }
+        return await response.Content.ReadFromJsonAsync<List<T>>(cancellationToken: cancellationToken) ?? new List<T>();
+    }
+
+    private async Task<HttpClient> CreateAuthorizedClientAsync(CancellationToken cancellationToken)
+    {
+        var token = await GetAccessTokenAsync(cancellationToken);
+        var client = httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+        return client;
     }
 
     private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
@@ -101,4 +169,16 @@ public class CovabeApiClient(
         [property: JsonPropertyName("token_type")] string TokenType);
 
     private sealed record MemberDto(int Id, Guid UserId, string? Email);
+
+    private sealed record RawBuildingDto(
+        Guid Id, Guid PropertyId, string? Name, string? CustomId,
+        int Status, int? FloorCount, int? UnitCount);
+
+    private sealed record RawFloorDto(
+        Guid Id, Guid PropertyId, Guid? BuildingId, int Number,
+        string? CustomId, int Status, int? UnitCount);
+
+    private sealed record RawUnitDto(
+        Guid Id, Guid PropertyId, Guid? BuildingId, Guid? FloorId,
+        string? CustomUnitId, string? Code, int Type, decimal Area, int Status);
 }
