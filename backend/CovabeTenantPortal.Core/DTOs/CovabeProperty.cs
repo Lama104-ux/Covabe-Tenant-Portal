@@ -9,4 +9,5 @@ public record CovabeProperty(
     string? City,
     string? Country,
     string? Description,
-    int Status);
+    int Status,
+    int? Type);
