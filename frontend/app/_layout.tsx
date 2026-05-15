@@ -34,6 +34,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="create-invitation" />
           <Stack.Screen name="properties" />
+          <Stack.Screen name="property/[id]" />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
