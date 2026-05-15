@@ -27,4 +27,20 @@ public class PropertiesController(ICovabeApiClient covabeApiClient) : Controller
         var properties = await covabeApiClient.GetPropertiesByOwnerEmailAsync(email, cancellationToken);
         return Ok(properties);
     }
+
+    [HttpGet("{id:guid}/buildings")]
+    public async Task<ActionResult<IEnumerable<CovabeBuilding>>> Buildings(Guid id, CancellationToken cancellationToken)
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var email = User.FindFirst("email")?.Value;
+
+        if (string.IsNullOrWhiteSpace(email))
+            return Unauthorized();
+
+        if (role != nameof(Role.Admin))
+            return Forbid();
+
+        var buildings = await covabeApiClient.GetBuildingsForPropertyAsync(email, id, cancellationToken);
+        return Ok(buildings);
+    }
 }
