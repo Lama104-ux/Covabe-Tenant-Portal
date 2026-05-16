@@ -20,8 +20,8 @@ export const PROPERTY_TYPE_META: Record<PropertyType, PropertyTypeMeta> = {
   residential:   { label: "Bostäder",           unitsLabel: "Lägenheter", unitsKey: "apartments", occupantsLabel: "Hyresgäster", unitPrefix: "Lgh"   },
   commercial:    { label: "Kommersiell",        unitsLabel: "Lokaler",    unitsKey: "units",      occupantsLabel: "Företag",     unitPrefix: "Lokal" },
   industrial:    { label: "Industriell",        unitsLabel: "Hallar",     unitsKey: "halls",      occupantsLabel: "Företag",     unitPrefix: "Hall"  },
-  land:          { label: "Mark",               unitsLabel: "—",          unitsKey: null,         occupantsLabel: "Arrendator",  unitPrefix: null    },
-  institutional: { label: "Institutionell",     unitsLabel: "—",          unitsKey: null,         occupantsLabel: "Verksamhet",  unitPrefix: null    },
+  land:          { label: "Mark",               unitsLabel: "Tomter",     unitsKey: null,         occupantsLabel: "Arrendator",  unitPrefix: "Tomt"  },
+  institutional: { label: "Institutionell",     unitsLabel: "Enheter",    unitsKey: null,         occupantsLabel: "Verksamhet",  unitPrefix: "Enhet" },
   transport:     { label: "Transport",          unitsLabel: "Platser",    unitsKey: "spots",      occupantsLabel: "Hyresgäster", unitPrefix: "Plats" },
   special:       { label: "Speciell",           unitsLabel: "Enheter",    unitsKey: "units",      occupantsLabel: "Hyresgäster", unitPrefix: "Enhet" },
   mixed:         { label: "Blandad användning", unitsLabel: "Enheter",    unitsKey: "units",      occupantsLabel: "Hyresgäster", unitPrefix: "Enhet" },
@@ -44,6 +44,6 @@ export function propertyTypeFromInt(t: number | null | undefined): PropertyType 
 export function statusPill(active: boolean) {
   return {
     label: active ? "Aktiv" : "Inaktiv",
-    dotColor: active ? "#009700" : "#9CA3AF",
+    dotColor: active ? "#16A34A" : "#9CA3AF",
   };
 }
