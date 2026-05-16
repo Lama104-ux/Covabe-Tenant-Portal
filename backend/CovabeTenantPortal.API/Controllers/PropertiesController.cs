@@ -35,7 +35,7 @@ public class PropertiesController(
     }
 
     [HttpGet("{id:guid}/buildings")]
-    public async Task<ActionResult<IEnumerable<CovabeBuilding>>> Buildings(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<PropertyStructure>> Buildings(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetAdminEmail(out var email, out var forbid)) return forbid!;
 
@@ -47,8 +47,8 @@ public class PropertiesController(
             a => a.UnitId,
             a => new UnitOccupant(a.TenantFirstName, a.TenantLastName, a.TenantEmail, a.TenantPhone));
 
-        var buildings = await covabeApiClient.GetBuildingsForPropertyAsync(email!, id, occupants, cancellationToken);
-        return Ok(buildings);
+        var structure = await covabeApiClient.GetPropertyStructureAsync(email!, id, occupants, cancellationToken);
+        return Ok(structure);
     }
 
     [HttpGet("{id:guid}/units/{unitId:guid}")]
