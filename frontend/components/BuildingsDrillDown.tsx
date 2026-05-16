@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -12,7 +13,14 @@ export type Unit = {
   type: number;
   area: number;
   status: number;
+  occupantFirstName: string | null;
+  occupantLastName: string | null;
+  occupantEmail: string | null;
+  occupantPhone: string | null;
 };
+
+export const occupantFullName = (u: Unit) =>
+  [u.occupantFirstName, u.occupantLastName].filter(Boolean).join(" ") || null;
 
 export type Floor = {
   id: string;
@@ -43,20 +51,16 @@ export type ViewState =
 type Props = {
   theme: Theme;
   propertyType: PropertyType;
+  propertyId: string;
   buildings: Building[];
   view: ViewState;
   setView: (v: ViewState) => void;
 };
 
-const isOccupied = (s: number) => s === 1 || s === 3;
-const unitStatusLabel = (s: number) => {
-  if (s === 1) return "Uthyrd";
-  if (s === 2) return "Såld";
-  if (s === 3) return "Upptagen";
-  return "Ledig";
-};
+export const isOccupied = (u: Unit) => !!(u.occupantFirstName || u.occupantLastName);
 
-export function BuildingsDrillDown({ theme, propertyType, buildings, view, setView }: Props) {
+export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings, view, setView }: Props) {
+  const router = useRouter();
   const meta = PROPERTY_TYPE_META[propertyType];
 
   const skipBuilding = buildings.length === 1;
@@ -88,7 +92,7 @@ export function BuildingsDrillDown({ theme, propertyType, buildings, view, setVi
           {buildings.map((b, i) => {
             const total = b.floors.reduce((a, f) => a + f.units.length, 0);
             const occ = b.floors.reduce(
-              (a, f) => a + f.units.filter((u) => isOccupied(u.status)).length, 0,
+              (a, f) => a + f.units.filter(isOccupied).length, 0,
             );
             return (
               <Pressable
@@ -136,7 +140,7 @@ export function BuildingsDrillDown({ theme, propertyType, buildings, view, setVi
             </View>
           ) : building.floors.map((f, i) => {
             const total = f.units.length;
-            const occ = f.units.filter((u) => isOccupied(u.status)).length;
+            const occ = f.units.filter(isOccupied).length;
             return (
               <Pressable
                 key={f.id}
@@ -183,11 +187,23 @@ export function BuildingsDrillDown({ theme, propertyType, buildings, view, setVi
       ) : (
         <View style={s.grid}>
           {floor.units.map((u) => {
-            const occ = isOccupied(u.status);
+            const occ = isOccupied(u);
             const dot = occ ? "#009700" : theme.textMute;
             const bg = occ ? `${theme.accent}10` : theme.surfaceAlt;
             return (
-              <View key={u.id} style={[s.unitCard, { backgroundColor: bg, borderColor: theme.border }]}>
+              <Pressable
+                key={u.id}
+                onPress={() =>
+                  router.push({
+                    pathname: "/unit/[id]",
+                    params: { id: u.id, propertyId },
+                  })
+                }
+                style={({ pressed }) => [
+                  s.unitCard,
+                  { backgroundColor: bg, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={[s.unitNumber, { color: theme.text }]}>
                     {u.code || u.customUnitId || "—"}
@@ -195,9 +211,9 @@ export function BuildingsDrillDown({ theme, propertyType, buildings, view, setVi
                   <View style={[s.unitDot, { backgroundColor: dot }]} />
                 </View>
                 <Text style={[s.unitOccupant, { color: theme.textMute }]} numberOfLines={1}>
-                  {unitStatusLabel(u.status)}
+                  {occ ? occupantFullName(u) : "Ledig"}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
