@@ -1,7 +1,7 @@
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable,
   ScrollView, StatusBar, StyleSheet, Text, TextInput, View, useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,6 +61,7 @@ const T = {
   fullNameLabel: "Namn",
   emailLabel: "E-post",
   phoneLabel: "Telefon (valfritt)",
+  phoneDisplayLabel: "Telefon",
   firstNameRequired: "Förnamn krävs",
   lastNameRequired: "Efternamn krävs",
   emailRequired: "E-post krävs",
@@ -98,6 +99,8 @@ export default function UnitDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!id || !propertyId || !token) return;
@@ -176,6 +179,7 @@ export default function UnitDetailScreen() {
   };
 
   const performRemove = async () => {
+    setRemoveError(null);
     setRemoving(true);
     try {
       await api.delete(`/api/properties/${propertyId}/units/${id}/assignment`, token);
@@ -193,18 +197,17 @@ export default function UnitDetailScreen() {
             }
           : prev,
       );
+      setConfirmRemoveOpen(false);
     } catch {
-      Alert.alert("Fel", T.removeFailed);
+      setRemoveError(T.removeFailed);
     } finally {
       setRemoving(false);
     }
   };
 
   const handleRemove = () => {
-    Alert.alert(T.removeConfirmTitle, T.removeConfirmMsg, [
-      { text: T.cancel, style: "cancel" },
-      { text: T.removeButton, style: "destructive", onPress: performRemove },
-    ]);
+    setRemoveError(null);
+    setConfirmRemoveOpen(true);
   };
 
   if (loading && !unit) {
@@ -279,12 +282,12 @@ export default function UnitDetailScreen() {
             </View>
 
             {occupied ? (
-              <View style={{ gap: 8 }}>
+              <View>
                 <DetailRow theme={theme} label={T.firstNameLabel} value={unit.occupantFirstName || "—"} />
                 <DetailRow theme={theme} label={T.lastNameLabel} value={unit.occupantLastName || "—"} />
                 <DetailRow theme={theme} label={T.emailLabel} value={unit.occupantEmail || "—"} />
                 {unit.occupantPhone ? (
-                  <DetailRow theme={theme} label={T.phoneLabel} value={unit.occupantPhone} />
+                  <DetailRow theme={theme} label={T.phoneDisplayLabel} value={unit.occupantPhone} />
                 ) : null}
                 <DetailRow
                   theme={theme}
@@ -299,7 +302,7 @@ export default function UnitDetailScreen() {
                   disabled={removing}
                   style={({ pressed }) => [
                     s.dangerBtn,
-                    { backgroundColor: theme.danger, opacity: pressed || removing ? 0.75 : 1, marginTop: 8 },
+                    { backgroundColor: theme.danger, opacity: pressed || removing ? 0.75 : 1, marginTop: 14 },
                   ]}
                 >
                   <Text style={s.dangerBtnText}>{removing ? T.removing : T.removeButton}</Text>
@@ -375,6 +378,54 @@ export default function UnitDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={confirmRemoveOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !removing && setConfirmRemoveOpen(false)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={s.modalBackdrop}
+          onPress={() => !removing && setConfirmRemoveOpen(false)}
+        >
+          <Pressable
+            style={[s.modalCard, { backgroundColor: theme.surface }]}
+            onPress={() => {}}
+          >
+            <Text style={[s.modalTitle, { color: theme.text }]}>{T.removeConfirmTitle}</Text>
+            <Text style={[s.modalBody, { color: theme.textMute }]}>{T.removeConfirmMsg}</Text>
+            {removeError ? (
+              <Text style={[s.errorText, { color: theme.danger, marginTop: 8 }]}>{removeError}</Text>
+            ) : null}
+            <View style={s.modalActions}>
+              <Pressable
+                onPress={() => setConfirmRemoveOpen(false)}
+                disabled={removing}
+                style={({ pressed }) => [
+                  s.modalSecondaryBtn,
+                  { borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Text style={[s.modalSecondaryBtnText, { color: theme.text }]}>{T.cancel}</Text>
+              </Pressable>
+              <Pressable
+                onPress={performRemove}
+                disabled={removing}
+                style={({ pressed }) => [
+                  s.modalDangerBtn,
+                  { backgroundColor: theme.danger, opacity: pressed || removing ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={s.modalDangerBtnText}>
+                  {removing ? T.removing : T.removeButton}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -393,9 +444,9 @@ function Header({ theme, onBack }: { theme: Theme; onBack: () => void }) {
 
 function DetailRow({ theme, label, value }: { theme: Theme; label: string; value: string }) {
   return (
-    <View>
-      <Text style={[s.fieldLabel, { color: theme.textMute }]}>{label}</Text>
-      <Text style={[s.fieldValue, { color: theme.text }]} selectable>{value}</Text>
+    <View style={s.detailRow}>
+      <Text style={[s.detailLabel, { color: theme.text }]}>{label}</Text>
+      <Text style={[s.detailValue, { color: theme.text }]} selectable>{value}</Text>
     </View>
   );
 }
@@ -465,6 +516,25 @@ const s = StyleSheet.create({
   fieldLabel: { fontFamily: Fonts.medium, fontSize: 11, marginBottom: 4 },
   fieldValue: { fontFamily: Fonts.semibold, fontSize: 14, lineHeight: 18 },
 
+  detailRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 6,
+    alignItems: "flex-start",
+  },
+  detailLabel: {
+    fontFamily: Fonts.bold,
+    fontSize: 13,
+    width: 92,
+    lineHeight: 18,
+  },
+  detailValue: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+
   input: {
     borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 12, paddingVertical: 10,
     fontFamily: Fonts.regular, fontSize: 14,
@@ -490,4 +560,55 @@ const s = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
 
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: Spacing.xxl },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.xl,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: Radius.lg,
+    padding: 20,
+  },
+  modalTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 18,
+    marginBottom: 8,
+  },
+  modalBody: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 18,
+  },
+  modalSecondaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  modalSecondaryBtnText: {
+    fontFamily: Fonts.semibold,
+    fontSize: 14,
+  },
+  modalDangerBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    alignItems: "center",
+  },
+  modalDangerBtnText: {
+    fontFamily: Fonts.semibold,
+    fontSize: 14,
+    color: "#fff",
+  },
 });
