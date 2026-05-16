@@ -41,6 +41,7 @@ export type Building = {
   floorCount: number | null;
   unitCount: number | null;
   floors: Floor[];
+  directUnits: Unit[];
 };
 
 export type ViewState =
@@ -53,13 +54,14 @@ type Props = {
   propertyType: PropertyType;
   propertyId: string;
   buildings: Building[];
+  propertyUnits?: Unit[];
   view: ViewState;
   setView: (v: ViewState) => void;
 };
 
 export const isOccupied = (u: Unit) => !!(u.occupantFirstName || u.occupantLastName);
 
-export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings, view, setView }: Props) {
+export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings, propertyUnits = [], view, setView }: Props) {
   const router = useRouter();
   const meta = PROPERTY_TYPE_META[propertyType];
 
@@ -70,14 +72,30 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
   const building = buildings[buildingIdx];
   const floor = building?.floors[floorIdx];
   const unitPrefix = meta.unitPrefix ?? "Enhet";
+  const sectionLabel = propertyType === "land" ? "TOMTER" : `${unitPrefix.toUpperCase()}ER`;
 
+  // No buildings — show property-level units (tomter / plots) directly
   if (buildings.length === 0) {
+    if (propertyUnits.length > 0) {
+      return (
+        <View>
+          <Text style={[s.sectionLabel, { color: theme.textMute }]}>{sectionLabel}</Text>
+          <UnitsGrid theme={theme} units={propertyUnits} propertyId={propertyId} router={router} />
+          <View style={[s.legend, { borderTopColor: theme.border }]}>
+            <LegendItem color="#16A34A" label="Uthyrd" theme={theme} />
+            <LegendItem color={theme.textMute} label="Ledig" theme={theme} />
+          </View>
+        </View>
+      );
+    }
     return (
       <View>
-        <Text style={[s.sectionLabel, { color: theme.textMute }]}>BYGGNADER</Text>
+        <Text style={[s.sectionLabel, { color: theme.textMute }]}>{propertyType === "land" ? "TOMTER" : "BYGGNADER"}</Text>
         <View style={[s.row, { backgroundColor: theme.surface, borderColor: theme.border, justifyContent: "center" }]}>
           <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: theme.textMute }}>
-            Inga byggnader registrerade för denna fastighet
+            {propertyType === "land"
+              ? "Inga tomter registrerade. Skapa tomter i Covabe-webbsidan."
+              : "Inga byggnader registrerade för denna fastighet"}
           </Text>
         </View>
       </View>
@@ -90,10 +108,14 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
         <Text style={[s.sectionLabel, { color: theme.textMute }]}>BYGGNADER</Text>
         <View style={{ gap: 8 }}>
           {buildings.map((b, i) => {
-            const total = b.floors.reduce((a, f) => a + f.units.length, 0);
-            const occ = b.floors.reduce(
-              (a, f) => a + f.units.filter(isOccupied).length, 0,
-            );
+            const floorUnits = b.floors.flatMap((f) => f.units);
+            const directUnits = b.directUnits ?? [];
+            const allUnits = [...floorUnits, ...directUnits];
+            const total = allUnits.length;
+            const occ = allUnits.filter(isOccupied).length;
+            const summary = b.floors.length > 0
+              ? `${b.floors.length} ${b.floors.length === 1 ? "våning" : "våningar"} · ${occ}/${total} uthyrda`
+              : `${total} ${unitPrefix.toLowerCase()}${total === 1 ? "" : "er"} · ${occ} uthyrda`;
             return (
               <Pressable
                 key={b.id}
@@ -108,9 +130,7 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.rowTitle, { color: theme.text }]}>{b.name || "Namnlös byggnad"}</Text>
-                  <Text style={[s.rowSub, { color: theme.textMute }]}>
-                    {b.floors.length} våningar · {occ}/{total} uthyrda
-                  </Text>
+                  <Text style={[s.rowSub, { color: theme.textMute }]}>{summary}</Text>
                 </View>
                 <ChevronRight color={theme.textMute} />
               </Pressable>
@@ -122,6 +142,29 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
   }
 
   if (effLevel === "floors") {
+    const hasFloors = building.floors.length > 0;
+    const directUnits = building.directUnits ?? [];
+
+    // If building has no floors but direct units, show units grid directly
+    if (!hasFloors && directUnits.length > 0) {
+      return (
+        <View>
+          <Breadcrumbs theme={theme} crumbs={[
+            ...(!skipBuilding ? [{ label: "Byggnader", onPress: () => setView({ level: "buildings" }) }] : []),
+            { label: building.name || "Byggnad" },
+          ]} />
+          <Text style={[s.sectionLabel, { color: theme.textMute }]}>
+            {(building.name || "BYGGNAD").toUpperCase()} · {unitPrefix.toUpperCase()}ER
+          </Text>
+          <UnitsGrid theme={theme} units={directUnits} propertyId={propertyId} router={router} />
+          <View style={[s.legend, { borderTopColor: theme.border }]}>
+            <LegendItem color="#16A34A" label="Uthyrd" theme={theme} />
+            <LegendItem color={theme.textMute} label="Ledig" theme={theme} />
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View>
         <Breadcrumbs theme={theme} crumbs={[
@@ -132,10 +175,10 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
           {skipBuilding ? "VÅNINGAR" : `${(building.name || "BYGGNAD").toUpperCase()} · VÅNINGAR`}
         </Text>
         <View style={{ gap: 8 }}>
-          {building.floors.length === 0 ? (
+          {!hasFloors ? (
             <View style={[s.row, { backgroundColor: theme.surface, borderColor: theme.border, justifyContent: "center" }]}>
               <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: theme.textMute }}>
-                Inga våningar registrerade
+                Inga våningar eller enheter registrerade
               </Text>
             </View>
           ) : building.floors.map((f, i) => {
@@ -178,53 +221,77 @@ export function BuildingsDrillDown({ theme, propertyType, propertyId, buildings,
       <Text style={[s.sectionLabel, { color: theme.textMute }]}>
         VÅNING {floor.number} · {unitPrefix.toUpperCase()}ER
       </Text>
-      {floor.units.length === 0 ? (
-        <View style={[s.row, { backgroundColor: theme.surface, borderColor: theme.border, justifyContent: "center" }]}>
-          <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: theme.textMute }}>
-            Inga enheter på denna våning
-          </Text>
-        </View>
-      ) : (
-        <View style={s.grid}>
-          {floor.units.map((u) => {
-            const occ = isOccupied(u);
-            const dot = occ ? "#009700" : theme.textMute;
-            const bg = occ ? `${theme.accent}10` : theme.surfaceAlt;
-            return (
-              <Pressable
-                key={u.id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/unit/[id]",
-                    params: { id: u.id, propertyId },
-                  })
-                }
-                style={({ pressed }) => [
-                  s.unitCard,
-                  { backgroundColor: bg, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={[s.unitNumber, { color: theme.text }]}>
-                    {u.code || u.customUnitId || "—"}
-                  </Text>
-                  <View style={[s.unitDot, { backgroundColor: dot }]} />
-                </View>
-                <Text style={[s.unitOccupant, { color: theme.textMute }]} numberOfLines={1}>
-                  {occ ? occupantFullName(u) : "Ledig"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
+      <UnitsGrid theme={theme} units={floor.units} propertyId={propertyId} router={router} />
       <View style={[s.legend, { borderTopColor: theme.border }]}>
-        <LegendItem color="#009700" label="Uthyrd" theme={theme} />
+        <LegendItem color="#16A34A" label="Uthyrd" theme={theme} />
         <LegendItem color={theme.textMute} label="Ledig" theme={theme} />
       </View>
     </View>
   );
+}
+
+function UnitsGrid({
+  theme, units, propertyId, router,
+}: {
+  theme: Theme;
+  units: Unit[];
+  propertyId: string;
+  router: ReturnType<typeof useRouter>;
+}) {
+  if (units.length === 0) {
+    return (
+      <View style={[s.row, { backgroundColor: theme.surface, borderColor: theme.border, justifyContent: "center" }]}>
+        <Text style={{ fontFamily: Fonts.medium, fontSize: 13, color: theme.textMute }}>
+          Inga enheter registrerade
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={s.grid}>
+      {units.map((u) => {
+        const occ = isOccupied(u);
+        const dot = occ ? "#16A34A" : theme.textMute;
+        const bg = occ ? `${theme.accent}10` : theme.surfaceAlt;
+        const areaStr = u.area > 0 ? `${formatArea(u.area)} m²` : null;
+        return (
+          <Pressable
+            key={u.id}
+            onPress={() =>
+              router.push({
+                pathname: "/unit/[id]",
+                params: { id: u.id, propertyId },
+              })
+            }
+            style={({ pressed }) => [
+              s.unitCard,
+              { backgroundColor: bg, borderColor: theme.border, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={[s.unitNumber, { color: theme.text }]}>
+                {u.code || u.customUnitId || "—"}
+              </Text>
+              <View style={[s.unitDot, { backgroundColor: dot }]} />
+            </View>
+            {areaStr ? (
+              <Text style={[s.unitArea, { color: theme.textMute }]} numberOfLines={1}>
+                {areaStr}
+              </Text>
+            ) : null}
+            <Text style={[s.unitOccupant, { color: theme.textMute }]} numberOfLines={1}>
+              {occ ? occupantFullName(u) : "Ledig"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function formatArea(area: number): string {
+  if (Number.isInteger(area)) return area.toString();
+  return area.toFixed(1).replace(".", ",");
 }
 
 function Breadcrumbs({ theme, crumbs }: { theme: Theme; crumbs: { label: string; onPress?: () => void }[] }) {
@@ -299,6 +366,7 @@ const s = StyleSheet.create({
   },
   unitNumber:   { fontFamily: Fonts.bold, fontSize: 12 },
   unitDot:      { width: 8, height: 8, borderRadius: 4, marginTop: 3 },
+  unitArea:     { fontFamily: Fonts.semibold, fontSize: 10.5 },
   unitOccupant: { fontFamily: Fonts.medium, fontSize: 10 },
 
   legend: {
