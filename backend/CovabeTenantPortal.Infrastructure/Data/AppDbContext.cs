@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LoanedItem> LoanedItems => Set<LoanedItem>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<UnitAssignment> UnitAssignments => Set<UnitAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
