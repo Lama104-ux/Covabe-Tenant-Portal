@@ -27,10 +27,18 @@ type UnitDetail = {
   acceptUrl: string | null;
 };
 
+type UnitLite = { id: string; code: string | null; customUnitId: string | null };
+
 type Building = {
   id: string;
   name: string | null;
-  floors: { id: string; number: number; units: { id: string; code: string | null; customUnitId: string | null }[] }[];
+  floors: { id: string; number: number; units: UnitLite[] }[];
+  directUnits: UnitLite[];
+};
+
+type PropertyStructureResponse = {
+  buildings: Building[];
+  propertyUnits: UnitLite[];
 };
 
 type Ctx = {
@@ -105,24 +113,41 @@ export default function UnitDetailScreen() {
   const fetchAll = useCallback(async () => {
     if (!id || !propertyId || !token) return;
     try {
-      const [detail, buildings] = await Promise.all([
+      const [detail, structure] = await Promise.all([
         api.get<UnitDetail>(`/api/properties/${propertyId}/units/${id}`, token),
-        api.get<Building[]>(`/api/properties/${propertyId}/buildings`, token),
+        api.get<PropertyStructureResponse>(`/api/properties/${propertyId}/buildings`, token),
       ]);
       setUnit(detail);
 
       let buildingName: string | null = null;
       let floorNumber: number | null = null;
       let unitLabel = "—";
-      for (const b of buildings) {
+      const labelOf = (u: UnitLite) => u.code || u.customUnitId || "—";
+
+      // Search inside floors first
+      outer: for (const b of structure.buildings ?? []) {
         for (const f of b.floors) {
           const found = f.units.find((u) => u.id === id);
           if (found) {
             buildingName = b.name;
             floorNumber = f.number;
-            unitLabel = found.code || found.customUnitId || "—";
-            break;
+            unitLabel = labelOf(found);
+            break outer;
           }
+        }
+        // Direct units (building-level, no floor)
+        const direct = (b.directUnits ?? []).find((u) => u.id === id);
+        if (direct) {
+          buildingName = b.name;
+          unitLabel = labelOf(direct);
+          break;
+        }
+      }
+      // Property-level units (no building, no floor — tomter/plots)
+      if (unitLabel === "—") {
+        const plot = (structure.propertyUnits ?? []).find((u) => u.id === id);
+        if (plot) {
+          unitLabel = labelOf(plot);
         }
       }
       setCtx({ buildingName, floorNumber, unitLabel });
@@ -235,7 +260,7 @@ export default function UnitDetailScreen() {
 
   const fullName = [unit.occupantFirstName, unit.occupantLastName].filter(Boolean).join(" ");
   const occupied = !!fullName;
-  const dot = occupied ? "#009700" : theme.textMute;
+  const dot = occupied ? "#16A34A" : theme.textMute;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["top"]}>
