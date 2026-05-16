@@ -128,7 +128,7 @@ export default function PropertyDetailScreen() {
 
   const totalUnits = buildings.reduce((a, b) => a + b.floors.reduce((aa, f) => aa + f.units.length, 0), 0);
   const occupiedUnits = buildings.reduce(
-    (a, b) => a + b.floors.reduce((aa, f) => aa + f.units.filter((u) => u.status === 1 || u.status === 3).length, 0),
+    (a, b) => a + b.floors.reduce((aa, f) => aa + f.units.filter((u) => !!(u.occupantFirstName || u.occupantLastName)).length, 0),
     0,
   );
 
@@ -190,7 +190,7 @@ export default function PropertyDetailScreen() {
           </View>
         ) : null}
 
-        <BuildingsDrillDown theme={theme} propertyType={typeKey} buildings={buildings} view={view} setView={setView} />
+        <BuildingsDrillDown theme={theme} propertyType={typeKey} propertyId={id!} buildings={buildings} view={view} setView={setView} />
       </ScrollView>
     </SafeAreaView>
   );
