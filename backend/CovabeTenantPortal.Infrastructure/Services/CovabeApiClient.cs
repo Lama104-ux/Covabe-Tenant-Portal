@@ -62,10 +62,11 @@ public class CovabeApiClient(
         CancellationToken cancellationToken = default)
     {
         var properties = await GetPropertiesByOwnerEmailAsync(ownerEmail, cancellationToken);
-        if (properties.All(p => p.Id != propertyId))
+        var property = properties.FirstOrDefault(p => p.Id == propertyId);
+        if (property is null)
         {
             logger.LogInformation("Property {PropertyId} not owned by {Email}", propertyId, ownerEmail);
-            return new PropertyStructure([], []);
+            return new PropertyStructure(0, [], []);
         }
 
         var (buildings, floors, units) = await FetchBuildingStructureAsync(propertyId, cancellationToken);
@@ -114,7 +115,7 @@ public class CovabeApiClient(
             .Select(MapUnit)
             .ToList();
 
-        return new PropertyStructure(mappedBuildings, propertyUnits);
+        return new PropertyStructure(property.Status, mappedBuildings, propertyUnits);
     }
 
     public async Task<UnitLookupResult?> FindUnitInPropertyAsync(
@@ -124,13 +125,13 @@ public class CovabeApiClient(
         CancellationToken cancellationToken = default)
     {
         var properties = await GetPropertiesByOwnerEmailAsync(ownerEmail, cancellationToken);
-        if (properties.All(p => p.Id != propertyId))
-            return null;
+        var property = properties.FirstOrDefault(p => p.Id == propertyId);
+        if (property is null) return null;
 
         var (_, _, units) = await FetchBuildingStructureAsync(propertyId, cancellationToken);
         var match = units.FirstOrDefault(u => u.Id == unitId);
         if (match is null) return null;
-        return new UnitLookupResult(match.Id, match.PropertyId, match.BuildingId, match.FloorId);
+        return new UnitLookupResult(match.Id, match.PropertyId, match.BuildingId, match.FloorId, property.Status);
     }
 
     private async Task<(List<RawBuildingDto> Buildings, List<RawFloorDto> Floors, List<RawUnitDto> Units)>
