@@ -33,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="accept-invitation" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="create-invitation" />
+          <Stack.Screen name="change-password" />
           <Stack.Screen name="properties" />
           <Stack.Screen name="invite-tenant" />
           <Stack.Screen name="property/[id]" />
