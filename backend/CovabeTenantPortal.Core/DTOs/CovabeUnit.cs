@@ -9,4 +9,8 @@ public record CovabeUnit(
     string? Code,
     int Type,
     decimal Area,
-    int Status);
+    int Status,
+    string? OccupantFirstName,
+    string? OccupantLastName,
+    string? OccupantEmail,
+    string? OccupantPhone);
