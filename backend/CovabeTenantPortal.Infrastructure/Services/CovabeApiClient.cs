@@ -55,7 +55,11 @@ public class CovabeApiClient(
         return properties ?? [];
     }
 
-    public async Task<List<CovabeBuilding>> GetBuildingsForPropertyAsync(string ownerEmail, Guid propertyId, CancellationToken cancellationToken = default)
+    public async Task<List<CovabeBuilding>> GetBuildingsForPropertyAsync(
+        string ownerEmail,
+        Guid propertyId,
+        IReadOnlyDictionary<Guid, UnitOccupant>? occupants = null,
+        CancellationToken cancellationToken = default)
     {
         var properties = await GetPropertiesByOwnerEmailAsync(ownerEmail, cancellationToken);
         if (properties.All(p => p.Id != propertyId))
@@ -64,6 +68,59 @@ public class CovabeApiClient(
             return [];
         }
 
+        var (buildings, floors, units) = await FetchBuildingStructureAsync(propertyId, cancellationToken);
+
+        return buildings
+            .Select(b =>
+            {
+                var floorsForBuilding = floors
+                    .Where(f => f.BuildingId == b.Id)
+                    .OrderBy(f => f.Number)
+                    .Select(f =>
+                    {
+                        var unitsForFloor = units
+                            .Where(u => u.FloorId == f.Id)
+                            .Select(u =>
+                            {
+                                UnitOccupant? occupant = null;
+                                if (occupants is not null && occupants.TryGetValue(u.Id, out var o)) occupant = o;
+                                return new CovabeUnit(
+                                    u.Id, u.PropertyId, u.BuildingId, u.FloorId,
+                                    u.CustomUnitId, u.Code, u.Type, u.Area, (int)u.Status,
+                                    occupant?.FirstName, occupant?.LastName, occupant?.Email, occupant?.Phone);
+                            })
+                            .ToList();
+                        return new CovabeFloor(
+                            f.Id, f.PropertyId, f.BuildingId, f.Number, f.CustomId,
+                            (int)f.Status, f.UnitCount, unitsForFloor);
+                    })
+                    .ToList();
+                return new CovabeBuilding(
+                    b.Id, b.PropertyId, b.Name, b.CustomId, (int)b.Status,
+                    b.FloorCount, b.UnitCount, floorsForBuilding);
+            })
+            .ToList();
+    }
+
+    public async Task<UnitLookupResult?> FindUnitInPropertyAsync(
+        string ownerEmail,
+        Guid propertyId,
+        Guid unitId,
+        CancellationToken cancellationToken = default)
+    {
+        var properties = await GetPropertiesByOwnerEmailAsync(ownerEmail, cancellationToken);
+        if (properties.All(p => p.Id != propertyId))
+            return null;
+
+        var (_, _, units) = await FetchBuildingStructureAsync(propertyId, cancellationToken);
+        var match = units.FirstOrDefault(u => u.Id == unitId);
+        if (match is null) return null;
+        return new UnitLookupResult(match.Id, match.PropertyId, match.BuildingId, match.FloorId);
+    }
+
+    private async Task<(List<RawBuildingDto> Buildings, List<RawFloorDto> Floors, List<RawUnitDto> Units)>
+        FetchBuildingStructureAsync(Guid propertyId, CancellationToken cancellationToken)
+    {
         var client = await CreateAuthorizedClientAsync(cancellationToken);
         var baseUrl = _settings.PropertyServiceUrl.TrimEnd('/');
 
@@ -80,30 +137,7 @@ public class CovabeApiClient(
             : await FetchListAsync<RawUnitDto>(client,
                 $"{baseUrl}/api/app/unit/by-property-id/{propertyId}", cancellationToken);
 
-        return buildings
-            .Select(b =>
-            {
-                var floorsForBuilding = floors
-                    .Where(f => f.BuildingId == b.Id)
-                    .OrderBy(f => f.Number)
-                    .Select(f =>
-                    {
-                        var unitsForFloor = units
-                            .Where(u => u.FloorId == f.Id)
-                            .Select(u => new CovabeUnit(
-                                u.Id, u.PropertyId, u.BuildingId, u.FloorId,
-                                u.CustomUnitId, u.Code, u.Type, u.Area, (int)u.Status))
-                            .ToList();
-                        return new CovabeFloor(
-                            f.Id, f.PropertyId, f.BuildingId, f.Number, f.CustomId,
-                            (int)f.Status, f.UnitCount, unitsForFloor);
-                    })
-                    .ToList();
-                return new CovabeBuilding(
-                    b.Id, b.PropertyId, b.Name, b.CustomId, (int)b.Status,
-                    b.FloorCount, b.UnitCount, floorsForBuilding);
-            })
-            .ToList();
+        return (buildings, floors, units);
     }
 
     private async Task<List<T>> FetchListAsync<T>(HttpClient client, string url, CancellationToken cancellationToken)
