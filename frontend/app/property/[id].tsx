@@ -131,10 +131,11 @@ export default function PropertyDetailScreen() {
     (a, b) => a + b.floors.reduce((aa, f) => aa + f.units.filter((u) => !!(u.occupantFirstName || u.occupantLastName)).length, 0),
     0,
   );
+  const totalBuildings = buildings.length;
 
-  const heroSummary = meta.unitsKey
-    ? `${totalUnits} ${meta.unitsLabel.toLowerCase()} · ${occupiedUnits} uthyrda`
-    : T.noLeaseholder;
+  const heroSummary = totalBuildings > 0
+    ? `${totalBuildings} ${totalBuildings === 1 ? "byggnad" : "byggnader"}`
+    : T.propertyDetails;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["top"]}>
@@ -157,7 +158,7 @@ export default function PropertyDetailScreen() {
             <Text style={s.typeChipText}>{meta.label.toUpperCase()}</Text>
           </View>
           <View>
-            <Text style={s.heroLabel}>{T.propertyDetails}</Text>
+            <Text style={s.heroLabel}>Struktur</Text>
             <Text style={s.heroSummary} numberOfLines={2}>{heroSummary}</Text>
           </View>
         </View>
