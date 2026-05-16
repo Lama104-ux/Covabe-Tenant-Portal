@@ -8,4 +8,5 @@ public record CovabeBuilding(
     int Status,
     int? FloorCount,
     int? UnitCount,
-    List<CovabeFloor> Floors);
+    List<CovabeFloor> Floors,
+    List<CovabeUnit> DirectUnits);
