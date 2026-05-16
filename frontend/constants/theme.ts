@@ -24,7 +24,7 @@ export const Colors = {
   borderStrong: "rgba(0,0,0,0.10)",
 
   // Semantic
-  success: "#009700",
+  success: "#16A34A",
   warning: "#FFCA00",
   danger: "#8C181A",
 
@@ -75,6 +75,7 @@ export type Theme = {
   accent: string;
   accentSoft: string;
   danger: string;
+  success: string;
   dark: boolean;
 };
 
@@ -93,6 +94,7 @@ export function makeTheme(dark = false, accent = Colors.teal900): Theme {
     accent,
     accentSoft: dark ? `${accent}22` : `${accent}15`,
     danger: Colors.danger,
+    success: Colors.success,
     dark,
   };
 }
