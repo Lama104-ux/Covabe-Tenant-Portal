@@ -88,6 +88,9 @@ public class PropertiesController(
         var lookup = await covabeApiClient.FindUnitInPropertyAsync(email!, id, unitId, cancellationToken);
         if (lookup is null) return NotFound(new { message = "Lägenheten hittades inte i denna fastighet." });
 
+        if (lookup.PropertyStatus != 0)
+            return BadRequest(new { message = "Fastigheten är inaktiv. Aktivera den i Covabe-webbsidan för att kunna bjuda in nya hyresgäster." });
+
         var existing = await db.UnitAssignments.FirstOrDefaultAsync(a => a.UnitId == unitId, cancellationToken);
         if (existing is not null)
             return Conflict(new { message = "Lägenheten är redan tilldelad en hyresgäst." });
