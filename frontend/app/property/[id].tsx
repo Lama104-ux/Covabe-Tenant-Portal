@@ -9,7 +9,7 @@ import Svg, { Path } from "react-native-svg";
 
 import { Fonts, Radius, Spacing, makeTheme, Theme } from "@/constants/theme";
 import { PROPERTY_TYPE_META, propertyTypeFromInt } from "@/constants/propertyTypes";
-import { Building, BuildingsDrillDown, ViewState } from "@/components/BuildingsDrillDown";
+import { Building, BuildingsDrillDown, Unit, ViewState } from "@/components/BuildingsDrillDown";
 import { api } from "@/services/api";
 import { useAuth } from "@/services/auth-context";
 
@@ -30,7 +30,6 @@ const T = {
   statusActive: "Aktiv",
   statusInactive: "Inaktiv",
   contractStatus: "Status",
-  openTickets: "öppna ärenden",
   noLeaseholder: "Ingen hyresgäst ännu",
   loading: "Hämtar fastighetsdata…",
   notFound: "Fastighet hittades inte",
@@ -45,18 +44,20 @@ export default function PropertyDetailScreen() {
 
   const [property, setProperty] = useState<Property | null>(null);
   const [buildings, setBuildings] = useState<Building[]>([]);
+  const [propertyUnits, setPropertyUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewState>({ level: "buildings" });
 
   const fetchAll = useCallback(async () => {
     if (!id || !token) return;
     try {
-      const [props, blds] = await Promise.all([
+      const [props, structure] = await Promise.all([
         api.get<Property[]>("/api/properties", token),
-        api.get<Building[]>(`/api/properties/${id}/buildings`, token),
+        api.get<{ buildings: Building[]; propertyUnits: Unit[] }>(`/api/properties/${id}/buildings`, token),
       ]);
       setProperty(props.find((p) => p.id === id) ?? null);
-      setBuildings(blds);
+      setBuildings(structure.buildings ?? []);
+      setPropertyUnits(structure.propertyUnits ?? []);
     } catch (e) {
       void e;
     } finally {
@@ -126,11 +127,15 @@ export default function PropertyDetailScreen() {
   const cityLine = [property.city, property.country].filter(Boolean).join(", ");
   const fullAddress = [property.address, property.city, property.country].filter(Boolean).join(", ");
 
-  const totalUnits = buildings.reduce((a, b) => a + b.floors.reduce((aa, f) => aa + f.units.length, 0), 0);
-  const occupiedUnits = buildings.reduce(
-    (a, b) => a + b.floors.reduce((aa, f) => aa + f.units.filter((u) => !!(u.occupantFirstName || u.occupantLastName)).length, 0),
-    0,
-  );
+  const allUnits = [
+    ...buildings.flatMap((b) => [
+      ...b.floors.flatMap((f) => f.units),
+      ...(b.directUnits ?? []),
+    ]),
+    ...propertyUnits,
+  ];
+  const totalUnits = allUnits.length;
+  const occupiedUnits = allUnits.filter((u) => !!(u.occupantFirstName || u.occupantLastName)).length;
   const totalBuildings = buildings.length;
 
   const heroSummary = totalBuildings > 0
@@ -164,19 +169,9 @@ export default function PropertyDetailScreen() {
         </View>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {meta.unitsKey ? (
-            <>
-              <Stat theme={theme} value={totalUnits} label={meta.unitsLabel} />
-              <Stat theme={theme} value={occupiedUnits} label="Uthyrda" accent={occupiedUnits > 0} />
-              <Stat theme={theme} value={active ? T.statusActive : T.statusInactive} label={T.contractStatus} accent={active} />
-            </>
-          ) : (
-            <>
-              <Stat theme={theme} value={occupiedUnits} label={meta.occupantsLabel} accent={occupiedUnits > 0} />
-              <Stat theme={theme} value={active ? T.statusActive : T.statusInactive} label={T.contractStatus} accent={active} />
-              <Stat theme={theme} value={0} label={T.openTickets} />
-            </>
-          )}
+          <Stat theme={theme} value={totalUnits} label={meta.unitsLabel} />
+          <Stat theme={theme} value={occupiedUnits} label={meta.unitsKey ? "Uthyrda" : meta.occupantsLabel} />
+          <Stat theme={theme} value={active ? T.statusActive : T.statusInactive} label={T.contractStatus} success={active} danger={!active} />
         </View>
 
         {fullAddress ? (
@@ -191,7 +186,7 @@ export default function PropertyDetailScreen() {
           </View>
         ) : null}
 
-        <BuildingsDrillDown theme={theme} propertyType={typeKey} propertyId={id!} buildings={buildings} view={view} setView={setView} />
+        <BuildingsDrillDown theme={theme} propertyType={typeKey} propertyId={id!} buildings={buildings} propertyUnits={propertyUnits} view={view} setView={setView} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -209,10 +204,11 @@ function Header({ theme, onBack }: { theme: Theme; onBack: () => void }) {
   );
 }
 
-function Stat({ theme, value, label, accent }: { theme: Theme; value: number | string; label: string; accent?: boolean }) {
+function Stat({ theme, value, label, accent, success, danger }: { theme: Theme; value: number | string; label: string; accent?: boolean; success?: boolean; danger?: boolean }) {
+  const color = danger ? theme.danger : success ? theme.success : accent ? theme.accent : theme.text;
   return (
     <View style={[s.statCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <Text style={[s.statValue, { color: accent ? theme.accent : theme.text }]} numberOfLines={1}>{value}</Text>
+      <Text style={[s.statValue, { color }]} numberOfLines={1}>{value}</Text>
       <Text style={[s.statLabel, { color: theme.textMute }]} numberOfLines={2}>{label}</Text>
     </View>
   );
