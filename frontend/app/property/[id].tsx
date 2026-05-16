@@ -172,7 +172,7 @@ export default function PropertyDetailScreen() {
             </>
           ) : (
             <>
-              <Stat theme={theme} value="0" label={meta.occupantsLabel} />
+              <Stat theme={theme} value={occupiedUnits} label={meta.occupantsLabel} accent={occupiedUnits > 0} />
               <Stat theme={theme} value={active ? T.statusActive : T.statusInactive} label={T.contractStatus} accent={active} />
               <Stat theme={theme} value={0} label={T.openTickets} />
             </>
