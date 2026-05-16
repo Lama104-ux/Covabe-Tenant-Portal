@@ -53,7 +53,7 @@ export default function PropertyDetailScreen() {
     try {
       const [props, structure] = await Promise.all([
         api.get<Property[]>("/api/properties", token),
-        api.get<{ buildings: Building[]; propertyUnits: Unit[] }>(`/api/properties/${id}/buildings`, token),
+        api.get<{ propertyStatus: number; buildings: Building[]; propertyUnits: Unit[] }>(`/api/properties/${id}/buildings`, token),
       ]);
       setProperty(props.find((p) => p.id === id) ?? null);
       setBuildings(structure.buildings ?? []);
