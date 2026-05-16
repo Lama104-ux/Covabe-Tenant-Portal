@@ -186,7 +186,7 @@ function PropertyCard({ theme, property, onPress }: { theme: Theme; property: Pr
           ]}>
             <View style={[
               s.statusDot,
-              { backgroundColor: active ? "#009700" : theme.danger },
+              { backgroundColor: active ? "#16A34A" : theme.danger },
             ]} />
             <Text style={[
               s.statusText,
