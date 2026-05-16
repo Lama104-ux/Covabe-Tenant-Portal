@@ -21,4 +21,4 @@ public interface ICovabeApiClient
 
 public record UnitOccupant(string FirstName, string LastName, string Email, string? Phone);
 
-public record UnitLookupResult(Guid UnitId, Guid PropertyId, Guid? BuildingId, Guid? FloorId);
+public record UnitLookupResult(Guid UnitId, Guid PropertyId, Guid? BuildingId, Guid? FloorId, int PropertyStatus);
