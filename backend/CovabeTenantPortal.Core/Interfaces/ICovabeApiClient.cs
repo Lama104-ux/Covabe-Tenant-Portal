@@ -6,7 +6,7 @@ public interface ICovabeApiClient
 {
     Task<List<CovabeProperty>> GetPropertiesByOwnerEmailAsync(string email, CancellationToken cancellationToken = default);
 
-    Task<List<CovabeBuilding>> GetBuildingsForPropertyAsync(
+    Task<PropertyStructure> GetPropertyStructureAsync(
         string ownerEmail,
         Guid propertyId,
         IReadOnlyDictionary<Guid, UnitOccupant>? occupants = null,
