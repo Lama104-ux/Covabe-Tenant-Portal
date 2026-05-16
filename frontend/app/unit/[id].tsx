@@ -37,6 +37,7 @@ type Building = {
 };
 
 type PropertyStructureResponse = {
+  propertyStatus: number;
   buildings: Building[];
   propertyUnits: UnitLite[];
 };
@@ -83,6 +84,8 @@ const T = {
   inviteAccepted: "Hyresgästen har skapat konto",
   inviteExpired: "Inbjudan har löpt ut",
   acceptUrlLabel: "Aktiveringslänk (synlig endast i utveckling)",
+  inactivePropertyTitle: "Fastigheten är inaktiv",
+  inactivePropertyBody: "Aktivera fastigheten i Covabe-webbsidan för att kunna bjuda in nya hyresgäster.",
 };
 
 function invitationStatusLabel(s: InvitationStatus): string {
@@ -101,6 +104,7 @@ export default function UnitDetailScreen() {
 
   const [unit, setUnit] = useState<UnitDetail | null>(null);
   const [ctx, setCtx] = useState<Ctx | null>(null);
+  const [propertyActive, setPropertyActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [showForm, setShowForm] = useState(false);
@@ -118,6 +122,7 @@ export default function UnitDetailScreen() {
         api.get<PropertyStructureResponse>(`/api/properties/${propertyId}/buildings`, token),
       ]);
       setUnit(detail);
+      setPropertyActive(structure.propertyStatus === 0);
 
       let buildingName: string | null = null;
       let floorNumber: number | null = null;
@@ -389,15 +394,22 @@ export default function UnitDetailScreen() {
             ) : (
               <>
                 <Text style={[s.muted, { color: theme.textMute, marginBottom: 12 }]}>{T.noOccupant}</Text>
-                <Pressable
-                  onPress={() => setShowForm(true)}
-                  style={({ pressed }) => [
-                    s.primaryBtn,
-                    { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
-                  ]}
-                >
-                  <Text style={s.primaryBtnText}>{T.assignButton}</Text>
-                </Pressable>
+                {!propertyActive ? (
+                  <View style={[s.inactiveBanner, { borderColor: theme.danger, backgroundColor: `${theme.danger}10` }]}>
+                    <Text style={[s.inactiveTitle, { color: theme.danger }]}>{T.inactivePropertyTitle}</Text>
+                    <Text style={[s.inactiveBody, { color: theme.text }]}>{T.inactivePropertyBody}</Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={() => setShowForm(true)}
+                    style={({ pressed }) => [
+                      s.primaryBtn,
+                      { backgroundColor: theme.accent, opacity: pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    <Text style={s.primaryBtnText}>{T.assignButton}</Text>
+                  </Pressable>
+                )}
               </>
             )}
           </View>
@@ -581,6 +593,22 @@ const s = StyleSheet.create({
   dangerBtnText: { fontFamily: Fonts.semibold, fontSize: 14, color: "#fff" },
 
   errorText: { fontFamily: Fonts.medium, fontSize: 12 },
+
+  inactiveBanner: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: 14,
+    gap: 4,
+  },
+  inactiveTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+  },
+  inactiveBody: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
 
   legendDot: { width: 10, height: 10, borderRadius: 5 },
 
