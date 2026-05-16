@@ -524,6 +524,69 @@ namespace CovabeTenantPortal.Infrastructure.Migrations
                     b.ToTable("Units");
                 });
 
+            modelBuilder.Entity("CovabeTenantPortal.Core.Models.UnitAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AssignedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BuildingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("FloorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("InvitationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PropertyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TenantEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("TenantFirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TenantLastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TenantPhone")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("UnitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedById");
+
+                    b.HasIndex("InvitationId");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("UnitId")
+                        .IsUnique();
+
+                    b.ToTable("UnitAssignments");
+                });
+
             modelBuilder.Entity("CovabeTenantPortal.Core.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -745,6 +808,24 @@ namespace CovabeTenantPortal.Infrastructure.Migrations
                     b.Navigation("Floor");
 
                     b.Navigation("Property");
+                });
+
+            modelBuilder.Entity("CovabeTenantPortal.Core.Models.UnitAssignment", b =>
+                {
+                    b.HasOne("CovabeTenantPortal.Core.Models.User", "AssignedBy")
+                        .WithMany()
+                        .HasForeignKey("AssignedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CovabeTenantPortal.Core.Models.Invitation", "Invitation")
+                        .WithMany()
+                        .HasForeignKey("InvitationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AssignedBy");
+
+                    b.Navigation("Invitation");
                 });
 
             modelBuilder.Entity("CovabeTenantPortal.Core.Models.Building", b =>
