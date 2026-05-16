@@ -35,6 +35,7 @@ export default function RootLayout() {
           <Stack.Screen name="create-invitation" />
           <Stack.Screen name="properties" />
           <Stack.Screen name="property/[id]" />
+          <Stack.Screen name="unit/[id]" />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
