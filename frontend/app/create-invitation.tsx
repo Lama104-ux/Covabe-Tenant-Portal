@@ -33,7 +33,6 @@ export default function CreateInvitationScreen() {
   const { user, token } = useAuth();
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
-  const isAdmin = user?.role === 'Admin';
 
   const [role, setRole] = useState<InvitationRoleOption>(isSuperAdmin ? 'Admin' : 'Tenant');
   const [email, setEmail] = useState('');
@@ -41,7 +40,7 @@ export default function CreateInvitationScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!user) return <Redirect href="/login" />;
-  if (!isSuperAdmin && !isAdmin) return <Redirect href="/home" />;
+  if (!isSuperAdmin) return <Redirect href="/home" />;
 
   const handleSubmit = async () => {
     if (!email.trim()) {
