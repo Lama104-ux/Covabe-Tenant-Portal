@@ -55,7 +55,7 @@ public class CovabeApiClient(
         return properties ?? [];
     }
 
-    public async Task<List<CovabeBuilding>> GetBuildingsForPropertyAsync(
+    public async Task<PropertyStructure> GetPropertyStructureAsync(
         string ownerEmail,
         Guid propertyId,
         IReadOnlyDictionary<Guid, UnitOccupant>? occupants = null,
@@ -65,12 +65,22 @@ public class CovabeApiClient(
         if (properties.All(p => p.Id != propertyId))
         {
             logger.LogInformation("Property {PropertyId} not owned by {Email}", propertyId, ownerEmail);
-            return [];
+            return new PropertyStructure([], []);
         }
 
         var (buildings, floors, units) = await FetchBuildingStructureAsync(propertyId, cancellationToken);
 
-        return buildings
+        CovabeUnit MapUnit(RawUnitDto u)
+        {
+            UnitOccupant? occupant = null;
+            if (occupants is not null && occupants.TryGetValue(u.Id, out var o)) occupant = o;
+            return new CovabeUnit(
+                u.Id, u.PropertyId, u.BuildingId, u.FloorId,
+                u.CustomUnitId, u.Code, u.Type, u.Area, (int)u.Status,
+                occupant?.FirstName, occupant?.LastName, occupant?.Email, occupant?.Phone);
+        }
+
+        var mappedBuildings = buildings
             .Select(b =>
             {
                 var floorsForBuilding = floors
@@ -80,26 +90,31 @@ public class CovabeApiClient(
                     {
                         var unitsForFloor = units
                             .Where(u => u.FloorId == f.Id)
-                            .Select(u =>
-                            {
-                                UnitOccupant? occupant = null;
-                                if (occupants is not null && occupants.TryGetValue(u.Id, out var o)) occupant = o;
-                                return new CovabeUnit(
-                                    u.Id, u.PropertyId, u.BuildingId, u.FloorId,
-                                    u.CustomUnitId, u.Code, u.Type, u.Area, (int)u.Status,
-                                    occupant?.FirstName, occupant?.LastName, occupant?.Email, occupant?.Phone);
-                            })
+                            .Select(MapUnit)
                             .ToList();
                         return new CovabeFloor(
                             f.Id, f.PropertyId, f.BuildingId, f.Number, f.CustomId,
                             (int)f.Status, f.UnitCount, unitsForFloor);
                     })
                     .ToList();
+
+                var directUnits = units
+                    .Where(u => u.BuildingId == b.Id && u.FloorId == null)
+                    .Select(MapUnit)
+                    .ToList();
+
                 return new CovabeBuilding(
                     b.Id, b.PropertyId, b.Name, b.CustomId, (int)b.Status,
-                    b.FloorCount, b.UnitCount, floorsForBuilding);
+                    b.FloorCount, b.UnitCount, floorsForBuilding, directUnits);
             })
             .ToList();
+
+        var propertyUnits = units
+            .Where(u => u.BuildingId == null && u.FloorId == null)
+            .Select(MapUnit)
+            .ToList();
+
+        return new PropertyStructure(mappedBuildings, propertyUnits);
     }
 
     public async Task<UnitLookupResult?> FindUnitInPropertyAsync(
@@ -132,10 +147,10 @@ public class CovabeApiClient(
             : await FetchListAsync<RawFloorDto>(client,
                 $"{baseUrl}/api/app/floor/by-property-id/{propertyId}", cancellationToken);
 
-        var units = floors.Count == 0
-            ? new List<RawUnitDto>()
-            : await FetchListAsync<RawUnitDto>(client,
-                $"{baseUrl}/api/app/unit/by-property-id/{propertyId}", cancellationToken);
+        // Always fetch units — Mark properties may have units directly under the property
+        // without any buildings or floors.
+        var units = await FetchListAsync<RawUnitDto>(client,
+            $"{baseUrl}/api/app/unit/by-property-id/{propertyId}", cancellationToken);
 
         return (buildings, floors, units);
     }
