@@ -143,7 +143,7 @@ export default function HomeScreen() {
                   subtitle={T.inviteTenantSub}
                   icon={<UserPlusIcon color={theme.accent} />}
                   iconBg={theme.accentSoft}
-                  onPress={() => router.push("/create-invitation")}
+                  onPress={() => router.push("/invite-tenant")}
                 />
                 <QuickAction
                   theme={theme}
